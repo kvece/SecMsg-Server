@@ -36,7 +36,7 @@
         .equ start_str_len, ($-start_str-1)
 
     bind_str:
-        .asciz "Binding to port \n"
+        .asciz "Binding to port: "
         .equ bind_str_len, ($-bind_str-1)
     
 .bss
@@ -71,8 +71,6 @@ _start:
     call atoi
     mov dword ptr [rbp-28], eax
     .L_default:
-    mov edi, dword ptr [rbp-28]
-    call print_uint
  
     # print start message
     mov rdx, start_str_len
@@ -110,7 +108,13 @@ _start:
     mov rdi, STDOUT
     mov rax, sys_write
     syscall
-
+    mov edi, dword ptr [rbp-28]
+    call print_uint
+    mov rdx, 1
+    lea rsi, newline_str
+    mov rdi, STDOUT
+    mov rax, sys_write
+    syscall
 
     # listen(sock_fd, 10)
     mov rsi, 10
