@@ -48,6 +48,7 @@
 _start:
 
     # setup registers
+    push rbp
     mov rbp, rsp
    
     # DECLARE VARIABLES
@@ -63,11 +64,10 @@ _start:
     sub rsp, 28
 
     # read from arg vector
-    here:
     mov dword ptr [rbp-28], 8080    # default port 8080
-    cmp qword ptr [rbp], 1          # check argc
+    cmp qword ptr [rbp+8], 1        # check argc
     jle .L_default
-    lea rdi, [rbp+8]                # set port = argv[1]
+    mov rdi, [rbp+24]               # set port = argv[1]
     call atoi
     mov dword ptr [rbp-28], eax
     .L_default:
@@ -151,7 +151,7 @@ print_uint:
     push rbp
     mov rbp, rsp
 
-    mov r8, rbp
+    mov r8, rbp                 # r8 will hold the string ptr
     sub rsp, 16                 # reserve space for string
     sub r8, 8                   # move away from old rbp
     mov dword ptr [r8], 0       # add terminating null
@@ -185,6 +185,7 @@ print_uint:
     mov rsi, r8
     mov r9, rbp
     sub r9, r8                  # calc length of number
+    sub r9, 8                   # remove space for old rbp
     mov rdx, r9
     mov rdi, STDOUT
     mov rax, sys_write
@@ -227,21 +228,27 @@ atoi:
     sub rax, 1
     add rdi, rax            # move to end of string
     xor r8, r8              # holds result
-    mov edx, 1              # holds current power of 10
-    mov bl, 10              # used for multiplying
+    mov ebx, 1              # holds current power of 10
     
     .L_add_loop:
     xor rax, rax            # clear rax
     mov al, byte ptr [rdi]  # load next digit
-    mul dl                  # multiply by next power of 10
+    sub al, 48              # convert from ascii
+    mul bx                  # multiply by next power of 10
+    shl edx, 16             # move top half over
+    xor eax, edx            # add top half into result
     add r8, rax             # add to result
     sub rdi, 1              # move left one digit
-    mov rax, rdx            # load power of 10 for moving
-    mul bl                  # mulitply power of 10
-    mov edx, eax            # save new power of 10
+    mov ax, bx              # load power of 10 for moving
+    mov dx, 10              # used for multiplying
+    mul dx                  # mulitply power of 10
+    mov bx, ax              # save new power of 10
+    shl edx, 16             # move top half over
+    xor ebx, edx            # add to saved power of 10
     loop .L_add_loop
 
     mov rax, r8
     pop rbx                 # restore register
     leave
     ret
+
